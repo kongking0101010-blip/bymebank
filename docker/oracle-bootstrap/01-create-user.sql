@@ -1,0 +1,13 @@
+-- Bootstrap script for Oracle XE / Free / Autonomous DB.
+-- Creates the application schema and grants the minimum privileges.
+
+ALTER SESSION SET CONTAINER = FREEPDB1;
+
+CREATE USER khmerbank IDENTIFIED BY khmerbank
+  DEFAULT TABLESPACE USERS
+  TEMPORARY TABLESPACE TEMP
+  QUOTA UNLIMITED ON USERS;
+
+GRANT CONNECT, RESOURCE TO khmerbank;
+GRANT CREATE SESSION, CREATE TABLE, CREATE SEQUENCE, CREATE VIEW,
+      CREATE PROCEDURE, CREATE TRIGGER, CREATE TYPE TO khmerbank;

@@ -1,0 +1,821 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* CSS @property — registered so we can animate the gradient angle */
+@property --angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    @apply bg-ink-50 text-ink-900 font-sans antialiased;
+    font-feature-settings: "ss01", "cv11", "cv02", "cv03", "cv04";
+    font-variation-settings: "opsz" 32;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    letter-spacing: -0.011em;
+  }
+  /* Tighter tracking for big display text — Stripe / Linear / Vercel feel */
+  h1, h2, h3, .display {
+    letter-spacing: -0.025em;
+    font-feature-settings: "ss01", "cv11";
+  }
+  h1 { letter-spacing: -0.032em; }
+  /* Tabular numerals everywhere by default in mono */
+  .font-mono { font-feature-settings: "ss01", "ss02", "zero"; }
+  ::selection { @apply bg-brand-200/70 text-brand-950; }
+
+  /*
+   * No-inspect friction layer (production only).
+   *
+   * Disables text selection on UI chrome by default so users can't easily
+   * copy long DOM snippets out of the page. Anything that's deliberately
+   * meant to be copyable (the sk_ key card, code blocks, transaction MD5s)
+   * opts back IN with `select-text` (Tailwind) or the `.user-copyable`
+   * helper below.
+   *
+   * Honest scope: this only blocks the casual user who'd shift-select. A
+   * developer with DevTools or a screen-grab tool defeats it instantly.
+   * The real defence is server-side auth, which is separate.
+   */
+  body[data-no-inspect="true"] {
+    -webkit-user-select: none;
+    -moz-user-select:    none;
+    -ms-user-select:     none;
+    user-select:         none;
+  }
+  body[data-no-inspect="true"] code,
+  body[data-no-inspect="true"] pre,
+  body[data-no-inspect="true"] input,
+  body[data-no-inspect="true"] textarea,
+  body[data-no-inspect="true"] .user-copyable {
+    -webkit-user-select: text;
+    -moz-user-select:    text;
+    -ms-user-select:     text;
+    user-select:         text;
+  }
+  /* Stop image drag (right-click → Save Image is still possible via the
+   *  browser menu; we just remove the easy drag). The vendor-prefixed
+   *  `-webkit-user-drag` is the one Chrome / Safari actually honour;
+   *  the bare `user-drag` is a Firefox no-op but harmless. */
+  body[data-no-inspect="true"] img {
+    -webkit-user-drag: none;
+  }
+
+  /* Soft, native-feeling focus ring */
+  *:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(58, 85, 255, 0.18);
+    border-radius: 12px;
+  }
+}
+
+@layer components {
+  /* ─────────────── Buttons ─────────────── */
+  .btn {
+    @apply relative inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5
+           text-sm font-semibold transition-all duration-200
+           focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400
+           disabled:opacity-50 disabled:cursor-not-allowed select-none;
+  }
+  /* Primary — premium shine-sweep on hover */
+  .btn-primary {
+    @apply btn text-white shadow-soft;
+    background: linear-gradient(135deg,#3a55ff 0%,#2535f5 50%,#1f28d4 100%);
+    overflow: hidden;
+  }
+  .btn-primary:hover {
+    box-shadow: 0 18px 45px -12px rgba(58, 85, 255, .55),
+                0 6px 18px -6px rgba(58, 85, 255, .35);
+    transform: translateY(-1px);
+  }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-primary::before {
+    content: "";
+    position: absolute; inset: 0;
+    background: linear-gradient(120deg,
+        transparent 0%,
+        transparent 35%,
+        rgba(255,255,255,.55) 50%,
+        transparent 65%,
+        transparent 100%);
+    transform: translateX(-130%);
+    transition: transform .8s ease;
+    pointer-events: none;
+  }
+  .btn-primary:hover::before { transform: translateX(130%); }
+
+  /* Use this on solid-white buttons placed on dark/mesh backgrounds to keep
+     them legible (suppresses the blue gradient + the white shine). */
+  .btn-on-dark {
+    background: #ffffff !important;
+    color: #1f28d4 !important;
+    overflow: visible !important;
+  }
+  .btn-on-dark::before { content: none !important; }
+  .btn-on-dark:hover {
+    background: #ecfff7 !important;
+    color: #1c25a8 !important;
+    box-shadow: 0 18px 45px -12px rgba(255, 255, 255, .35) !important;
+  }
+
+  .btn-secondary {
+    @apply btn bg-white text-ink-800 ring-1 ring-ink-200 hover:bg-ink-50 hover:ring-ink-300
+           hover:-translate-y-px hover:shadow-soft;
+  }
+  .btn-ghost {
+    @apply btn bg-transparent text-ink-700 hover:bg-ink-100;
+  }
+  .btn-danger {
+    @apply btn bg-red-600 text-white hover:bg-red-700 shadow-soft;
+  }
+
+  /* Animated gradient-border button — uiverse-style premium accent */
+  .btn-gradient {
+    @apply relative inline-flex items-center justify-center gap-2
+           rounded-xl px-4 py-2.5 text-sm font-semibold text-white
+           transition-all overflow-hidden;
+    background-clip: padding-box;
+    border: 1px solid transparent;
+  }
+  .btn-gradient::before {
+    content: "";
+    position: absolute; inset: 0; border-radius: inherit; padding: 1.5px;
+    background: conic-gradient(from var(--angle, 0deg),
+      #3a55ff, #0ecf81, #3a55ff);
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+            mask-composite: exclude;
+    animation: spin 4s linear infinite;
+  }
+  .btn-gradient::after {
+    content: "";
+    position: absolute; inset: 1.5px;
+    border-radius: 10px;
+    background: linear-gradient(135deg,#1c25a8,#1f28d4 50%,#2535f5);
+    z-index: -1;
+  }
+
+  /* ─────────────── Inputs ─────────────── */
+  .input {
+    @apply w-full rounded-xl bg-white px-3.5 py-2.5 text-sm text-ink-900 ring-1 ring-ink-200
+           placeholder:text-ink-400
+           focus:outline-none focus:ring-2 focus:ring-brand-500
+           transition;
+  }
+  .input:focus {
+    box-shadow:
+      0 0 0 3px rgba(58, 85, 255, .15),
+      0 1px 2px rgba(15, 23, 42, .04);
+  }
+  .label  { @apply block text-sm font-medium text-ink-700 mb-1.5; }
+  .help   { @apply mt-1 text-xs text-ink-500; }
+
+  /* ─────────────── Cards ─────────────── */
+  .card {
+    @apply rounded-2xl bg-white ring-1 ring-ink-100 shadow-soft transition-all;
+  }
+  .card-pad { @apply p-5 sm:p-6; }
+
+  .card-hover {
+    @apply card hover:-translate-y-1 hover:shadow-glow hover:ring-brand-100;
+  }
+
+  /* Premium card with animated gradient border on hover */
+  .card-premium {
+    @apply relative rounded-2xl bg-white p-[1.5px] transition-all;
+    background-image: linear-gradient(white, white),
+                      linear-gradient(135deg, #e2e8f0 0%, #e2e8f0 100%);
+    background-origin: border-box;
+    background-clip: padding-box, border-box;
+  }
+  .card-premium:hover {
+    background-image: linear-gradient(white, white),
+                      conic-gradient(from var(--angle,0deg),
+                          #3a55ff, #0ecf81, #f59e0b, #3a55ff);
+    transform: translateY(-2px);
+    box-shadow: 0 24px 64px -16px rgba(58, 85, 255, .25);
+  }
+  .card-premium > .inner {
+    @apply rounded-[14px] bg-white;
+  }
+
+  /* Spotlight card — radial light follows the cursor */
+  .card-spotlight {
+    @apply relative overflow-hidden rounded-2xl bg-white ring-1 ring-ink-100 shadow-soft;
+    isolation: isolate;
+  }
+  .card-spotlight::before {
+    content: "";
+    position: absolute; inset: -1px;
+    background: radial-gradient(600px circle at var(--mx,50%) var(--my,50%),
+        rgba(58, 85, 255, .14), transparent 40%);
+    opacity: 0;
+    transition: opacity .3s ease;
+    pointer-events: none;
+    z-index: -1;
+  }
+  .card-spotlight:hover::before { opacity: 1; }
+
+  /* ─────────────── Badges & chips ─────────────── */
+  .badge { @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium; }
+  .badge-success { @apply badge bg-accent-100 text-accent-800 ring-1 ring-accent-200/60; }
+  .badge-warning { @apply badge bg-amber-100 text-amber-800 ring-1 ring-amber-200/60; }
+  .badge-danger  { @apply badge bg-red-100 text-red-700 ring-1 ring-red-200/60; }
+  .badge-info    { @apply badge bg-brand-100 text-brand-800 ring-1 ring-brand-200/60; }
+  .badge-muted   { @apply badge bg-ink-100 text-ink-700; }
+  .badge-glow    {
+    @apply badge bg-gradient-to-r from-brand-600 to-brand-800 text-white;
+    box-shadow: 0 6px 20px -6px rgba(58,85,255,.55);
+  }
+
+  /* ─────────────── Tables ─────────────── */
+  .table-wrap   { @apply overflow-x-auto rounded-2xl ring-1 ring-ink-100 bg-white; }
+  .table        { @apply w-full text-sm; }
+  .table thead  { @apply bg-ink-50 text-ink-600; }
+  .table th     { @apply text-left font-semibold px-4 py-3 whitespace-nowrap; }
+  .table td     { @apply px-4 py-3 border-t border-ink-100; }
+  .table tr:hover td { @apply bg-ink-50/60; }
+
+  /* ─────────────── Stats ─────────────── */
+  .stat-card { @apply card card-pad relative overflow-hidden; }
+  .stat-card::before {
+    content: "";
+    @apply absolute -top-12 -right-12 h-40 w-40 rounded-full opacity-10 blur-2xl;
+  }
+
+  .chip-bank-aba    { @apply badge bg-rose-100 text-rose-700 ring-1 ring-rose-200/60; }
+  .chip-bank-acleda { @apply badge bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200/60; }
+  .chip-bank-wing   { @apply badge bg-sky-100 text-sky-700 ring-1 ring-sky-200/60; }
+  .chip-bank-bakong { @apply badge bg-violet-100 text-violet-700 ring-1 ring-violet-200/60; }
+
+  .scrollbar-thin::-webkit-scrollbar      { @apply h-1.5 w-1.5; }
+  .scrollbar-thin::-webkit-scrollbar-thumb{ @apply rounded-full bg-ink-200; }
+}
+
+@layer utilities {
+  /* Frosted glass nav */
+  .glass {
+    background: rgba(255,255,255,0.70);
+    backdrop-filter: saturate(200%) blur(18px);
+    -webkit-backdrop-filter: saturate(200%) blur(18px);
+  }
+  .glass-dark {
+    background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: saturate(200%) blur(18px);
+    -webkit-backdrop-filter: saturate(200%) blur(18px);
+  }
+
+  .text-balance { text-wrap: balance; }
+
+  /* ─── Animated mesh hero background ────────────────────────── */
+  .mesh-hero {
+    position: relative;
+    background-color: #1c2585;
+    background-image:
+      radial-gradient(at 18% 28%, rgba(58, 85, 255, .55) 0, transparent 55%),
+      radial-gradient(at 80% 20%, rgba(14, 207, 129, .35) 0, transparent 55%),
+      radial-gradient(at 70% 80%, rgba(245, 158, 11, .25) 0, transparent 55%),
+      radial-gradient(at 25% 78%, rgba(168, 85, 247, .35) 0, transparent 55%);
+  }
+  .mesh-hero::after {
+    content: "";
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(800px 300px at 30% -10%, rgba(255,255,255,.08), transparent 60%),
+      radial-gradient(500px 200px at 80% 110%, rgba(255,255,255,.06), transparent 60%);
+    pointer-events: none;
+  }
+
+  /* Subtle dotted grid overlay */
+  .dotted-grid {
+    background-image: radial-gradient(rgba(255,255,255,.10) 1px, transparent 1px);
+    background-size: 22px 22px;
+  }
+
+  /* ─── Shimmer / shine text ─────────────────────────────────── */
+  .text-shimmer {
+    background: linear-gradient(110deg, #1c2585 0%, #2535f5 30%, #0ecf81 50%, #2535f5 70%, #1c2585 100%);
+    background-size: 220% 100%;
+    -webkit-background-clip: text;
+            background-clip: text;
+    color: transparent;
+    animation: shimmer-text 6s linear infinite;
+  }
+
+  /* Animated gradient border (wrapper). Use as:
+       <div className="gradient-ring"><div className="bg-white p-6 rounded-2xl">...</div></div> */
+  .gradient-ring {
+    position: relative;
+    padding: 1.5px;
+    border-radius: 1rem;
+    background: conic-gradient(from var(--angle,0deg),
+      #3a55ff, #0ecf81, #f59e0b, #a855f7, #3a55ff);
+    animation: spin 7s linear infinite;
+  }
+  .gradient-ring > * { background-clip: padding-box; }
+
+  /* Floating animation */
+  .animate-floatY-slow  { animation: floatY-slow 6s ease-in-out infinite; }
+  .animate-pulseRing { animation: pulseRing 2.4s ease-out infinite; }
+
+  /* Aurora drifting blobs */
+  .aurora {
+    position: absolute; inset: -10%;
+    filter: blur(80px);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .aurora-blob {
+    position: absolute; border-radius: 50%; opacity: .65;
+    will-change: transform;
+  }
+  .aurora-blob.b1 { width: 540px; height: 540px; background: #3a55ff;
+                    top:  5%; left: -8%;  animation: drift1 18s ease-in-out infinite; }
+  .aurora-blob.b2 { width: 480px; height: 480px; background: #0ecf81;
+                    top: 30%; right: -10%; animation: drift2 22s ease-in-out infinite; }
+  .aurora-blob.b3 { width: 420px; height: 420px; background: #a855f7;
+                    bottom: -5%; left: 30%; animation: drift3 26s ease-in-out infinite; opacity: .45; }
+  .aurora-blob.b4 { width: 360px; height: 360px; background: #f59e0b;
+                    top: -8%; right: 30%;  animation: drift1 30s ease-in-out infinite reverse; opacity: .35; }
+
+  /* Marquee */
+  .marquee {
+    position: relative;
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 12%, #000 88%, transparent 100%);
+            mask-image: linear-gradient(90deg, transparent 0, #000 12%, #000 88%, transparent 100%);
+  }
+  .marquee-track {
+    display: flex;
+    gap: 3rem;
+    white-space: nowrap;
+    width: max-content;
+    animation: marquee 35s linear infinite;
+  }
+  .marquee:hover .marquee-track { animation-play-state: paused; }
+
+  /* Scroll progress bar fixed at top */
+  .scroll-progress {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #3a55ff, #0ecf81, #f59e0b);
+    transform-origin: left;
+    z-index: 60;
+    will-change: transform;
+  }
+
+  /* Animated star-field for hero */
+  .stars { position: absolute; inset: 0; pointer-events: none; }
+  .stars span {
+    position: absolute;
+    width: 2px; height: 2px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.7);
+    box-shadow: 0 0 6px rgba(255,255,255,.6);
+    animation: twinkle 3.2s ease-in-out infinite;
+  }
+
+  /* Tilt-on-hover container (CSS only) */
+  .tilt {
+    transition: transform .25s cubic-bezier(.21,.61,.35,1);
+    transform-style: preserve-3d;
+  }
+
+  /* Caret typing cursor */
+  .caret::after {
+    content: "▌";
+    display: inline-block;
+    margin-left: 4px;
+    color: #0ecf81;
+    animation: blink 1s steps(1) infinite;
+  }
+}
+
+/* Aurora drifts */
+@keyframes drift1 {
+  0%,100% { transform: translate(0, 0) scale(1); }
+  33%     { transform: translate(40px, -30px) scale(1.05); }
+  66%     { transform: translate(-30px, 40px) scale(0.95); }
+}
+@keyframes drift2 {
+  0%,100% { transform: translate(0, 0) scale(1); }
+  50%     { transform: translate(-50px, 30px) scale(1.1); }
+}
+@keyframes drift3 {
+  0%,100% { transform: translate(0, 0) scale(1); }
+  50%     { transform: translate(60px, -40px) scale(0.9); }
+}
+@keyframes marquee  { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@keyframes twinkle  { 0%,100% { opacity: .2; } 50% { opacity: 1; } }
+@keyframes blink    { 50% { opacity: 0; } }
+@keyframes pulseBar {
+  0%, 100% { transform: scaleY(.55); opacity: .6; transform-origin: bottom; }
+  50%      { transform: scaleY(1);   opacity: 1;  transform-origin: bottom; }
+}
+
+/* ─── keyframes ────────────────────────────────────────────── */
+@keyframes spin     { to { --angle: 360deg; } }
+@keyframes shimmer-text { 0% { background-position: 200% 0; }
+                          100% { background-position: -200% 0; } }
+@keyframes floatY-slow  { 0%,100% { transform: translateY(0) rotate(3deg); }
+                          50%     { transform: translateY(-10px) rotate(3deg); } }
+@keyframes pulseRing {
+  0%   { box-shadow: 0 0 0 0    rgba(58, 85, 255, .55); }
+  70%  { box-shadow: 0 0 0 16px rgba(58, 85, 255, 0); }
+  100% { box-shadow: 0 0 0 0    rgba(58, 85, 255, 0); }
+}
+
+/* Reduce animation for users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .btn-gradient::before,
+  .gradient-ring,
+  .text-shimmer,
+  .animate-floatY-slow,
+  .animate-pulseRing { animation: none !important; }
+  * { transition-duration: 0ms !important; }
+}
+
+/* ─── Premium CTA button (PrimaryCTA component) ────────────── */
+.pcta {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  border-radius: 9999px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  color: #ffffff;
+  isolation: isolate;
+  overflow: hidden;
+  cursor: pointer;
+  transform: translateY(0);
+  transition:
+    transform 240ms cubic-bezier(.21,.61,.35,1),
+    filter   220ms ease;
+  will-change: transform;
+}
+
+/* The base brand gradient (z=0) */
+.pcta-bg {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background:
+    linear-gradient(180deg, #1a1f2e 0%, #0a0d14 100%);
+  z-index: -2;
+  transition: filter 240ms ease;
+}
+
+/* Soft outer glow that grows on hover (z=-1, blurred) */
+.pcta-glow {
+  position: absolute;
+  inset: -10%;
+  border-radius: inherit;
+  background:
+    radial-gradient(60% 100% at 50% 100%, rgba(15, 18, 30, .55) 0%, transparent 70%);
+  filter: blur(14px);
+  opacity: .5;
+  z-index: -3;
+  transition: opacity 280ms ease, transform 280ms ease;
+}
+
+/* Diagonal shine swept across on hover */
+.pcta-shine {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    115deg,
+    transparent 0%,
+    transparent 35%,
+    rgba(255, 255, 255, .35) 50%,
+    transparent 65%,
+    transparent 100%
+  );
+  transform: translateX(-130%);
+  transition: transform 700ms cubic-bezier(.21, .61, .35, 1);
+  pointer-events: none;
+  z-index: 0;
+  mix-blend-mode: overlay;
+}
+
+/* Top hairline sheen (always visible, like real glass) */
+.pcta::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(180deg, rgba(255,255,255,.45), rgba(255,255,255,0) 40%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.pcta-label {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+/* Arrow + ghost arrow */
+.pcta-arrow {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  width: 14px;
+  height: 14px;
+  margin-left: 2px;
+  overflow: visible;
+}
+.pcta-arrow-main,
+.pcta-arrow-ghost {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
+  transition: transform 320ms cubic-bezier(.21, .61, .35, 1), opacity 220ms ease;
+}
+.pcta-arrow-ghost {
+  opacity: 0;
+  filter: blur(0.5px);
+}
+
+/* Hover state — the magic */
+.pcta:hover {
+  transform: translateY(-1px);
+}
+.pcta:hover .pcta-shine {
+  transform: translateX(130%);
+}
+.pcta:hover .pcta-glow {
+  opacity: 1;
+  transform: scale(1.05);
+}
+.pcta:hover .pcta-bg {
+  filter: brightness(1.06) saturate(1.05);
+}
+.pcta:hover .pcta-arrow-main {
+  transform: translate(4px, -50%);
+}
+.pcta:hover .pcta-arrow-ghost {
+  transform: translate(8px, -50%);
+  opacity: .55;
+}
+
+/* Active press */
+.pcta:active {
+  transform: translateY(0);
+}
+.pcta:active .pcta-bg {
+  filter: brightness(0.95);
+}
+
+/* Box shadow (lifts on hover) */
+.pcta {
+  box-shadow:
+    0 1px 0 0 rgba(255,255,255,.10) inset,
+    0 8px 24px -10px rgba(11, 13, 20, .55),
+    0 2px 6px  -2px rgba(11, 13, 20, .35);
+}
+.pcta:hover {
+  box-shadow:
+    0 1px 0 0 rgba(255,255,255,.15) inset,
+    0 18px 42px -12px rgba(11, 13, 20, .70),
+    0 4px 10px -3px rgba(11, 13, 20, .45);
+}
+
+/* Focus ring */
+.pcta:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 3px rgba(58, 85, 255, .35),
+    0 1px 0 0 rgba(255,255,255,.10) inset,
+    0 18px 42px -12px rgba(11, 13, 20, .70);
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .pcta,
+  .pcta-bg,
+  .pcta-shine,
+  .pcta-glow,
+  .pcta-arrow-main,
+  .pcta-arrow-ghost { transition: none !important; }
+  .pcta:hover { transform: none !important; }
+  .pcta:hover .pcta-shine { transform: translateX(-130%) !important; }
+}
+
+
+/* ─── KHQR receipt card (matches /pay on apicheckpayment.onrender.com) ─── */
+.qr-card {
+  box-shadow: rgba(0, 0, 0, 0.08) 0 8px 16px 0;
+}
+.dashed-line {
+  background: linear-gradient(90deg,
+              rgba(128, 128, 128, .85) 65%,
+              rgba(255, 255, 255, 0)   0);
+  background-size: 15px 1.5px;
+  background-position: 50% 100%;
+  background-repeat: repeat-x;
+}
+.red-triangle {
+  border-left: 19.5px solid transparent;
+  border-top:  19.5px solid rgb(226, 26, 26);
+  height: 0;
+  width: 0;
+}
+@keyframes khqr-fade-in {
+  from { opacity: 0; transform: scale(.95); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.khqr-fade-in {
+  animation: khqr-fade-in .4s ease-out forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .khqr-fade-in { animation: none; }
+}
+
+
+/* ─── BuyKey pay-step QR scan beam (sweeps top→bottom while generating) ── */
+@keyframes buy-scan-beam {
+  0%   { transform: translateY(-15%); opacity: 0; }
+  20%  { opacity: 1; }
+  80%  { opacity: 1; }
+  100% { transform: translateY(420%); opacity: 0; }
+}
+.buy-scan-beam {
+  animation: buy-scan-beam 1.6s ease-in-out infinite;
+  filter: blur(2px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .buy-scan-beam { animation: none; opacity: 0; }
+}
+
+
+/* ─── KHQR live-scan overlay (sweep beam + pulsing corner reticle) ───────
+ *
+ * Drop this on top of the rendered QR image while it's awaiting payment
+ * to make it feel "alive" — like the customer's phone is actively
+ * scanning it. Three layers:
+ *   .qr-scan-frame     — wrapper, square, position: relative on the QR.
+ *   .qr-scan-beam      — green laser line sweeping top↔bottom.
+ *   .qr-scan-corner    — 4 absolutely-placed corner brackets that pulse.
+ *   .qr-scan-glow      — soft radial flare that breathes underneath.
+ */
+@keyframes qr-scan-beam-y {
+  0%   { transform: translateY(0%);   opacity: 0; }
+  10%  { opacity: 1; }
+  50%  { transform: translateY(100%); opacity: 1; }
+  60%  { transform: translateY(100%); opacity: 0; }
+  61%  { transform: translateY(0%);   opacity: 0; }
+  70%  { opacity: 1; }
+  100% { transform: translateY(0%);   opacity: 0; }
+}
+@keyframes qr-scan-pulse {
+  0%, 100% { opacity: .55; transform: scale(1); }
+  50%      { opacity: 1;   transform: scale(1.06); }
+}
+@keyframes qr-scan-glow {
+  0%, 100% { opacity: .25; }
+  50%      { opacity: .55; }
+}
+.qr-scan-frame {
+  position: relative;
+  isolation: isolate;
+}
+/* The sweeping beam — a thin gradient bar */
+.qr-scan-beam {
+  position: absolute;
+  left: -2px; right: -2px;
+  top: 0;
+  height: 28px;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(16, 185, 129, .0) 10%,
+    rgba(16, 185, 129, .55) 45%,
+    rgba(16, 185, 129, 1)   50%,
+    rgba(16, 185, 129, .55) 55%,
+    transparent 100%
+  );
+  filter: blur(1.2px) drop-shadow(0 0 6px rgba(16,185,129,.85));
+  animation: qr-scan-beam-y 2.6s cubic-bezier(.65,.05,.36,1) infinite;
+  pointer-events: none;
+  border-radius: 999px;
+  z-index: 2;
+}
+/* Reticle corner brackets — tweaked to sit just outside the QR edge */
+.qr-scan-corner {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgb(16,185,129);
+  filter: drop-shadow(0 0 4px rgba(16,185,129,.7));
+  animation: qr-scan-pulse 1.6s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 3;
+}
+.qr-scan-corner.tl { top: -6px;    left: -6px;
+                     border-right: 0; border-bottom: 0;
+                     border-top-left-radius: 6px; }
+.qr-scan-corner.tr { top: -6px;    right: -6px;
+                     border-left: 0;  border-bottom: 0;
+                     border-top-right-radius: 6px; }
+.qr-scan-corner.bl { bottom: -6px; left: -6px;
+                     border-right: 0; border-top: 0;
+                     border-bottom-left-radius: 6px; }
+.qr-scan-corner.br { bottom: -6px; right: -6px;
+                     border-left: 0;  border-top: 0;
+                     border-bottom-right-radius: 6px; }
+/* Soft green flare under the QR */
+.qr-scan-glow {
+  position: absolute;
+  inset: -10%;
+  background: radial-gradient(60% 60% at 50% 50%,
+              rgba(16,185,129,.30) 0%, transparent 70%);
+  filter: blur(8px);
+  animation: qr-scan-glow 2.4s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .qr-scan-beam,
+  .qr-scan-corner,
+  .qr-scan-glow { animation: none; }
+  .qr-scan-beam, .qr-scan-glow { opacity: 0; }
+}
+
+
+/* ─── Animated brand wordmark — "Byme Bank" with laser-scan shimmer ──── */
+@keyframes brand-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+@keyframes brand-pulse-dot {
+  0%, 100% { transform: scale(1);    opacity: .9; }
+  50%      { transform: scale(1.35); opacity: 1;  }
+}
+.brand-wordmark {
+  position: relative;
+  display: inline-block;
+  background: linear-gradient(
+    110deg,
+    var(--brand-base, #0a1633) 0%,
+    var(--brand-base, #0a1633) 25%,
+    #2535f5 40%,
+    #0ecf81 50%,
+    #2535f5 60%,
+    var(--brand-base, #0a1633) 75%,
+    var(--brand-base, #0a1633) 100%
+  );
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+          background-clip: text;
+  color: transparent;
+  animation: brand-shimmer 3.6s linear infinite;
+  letter-spacing: -0.025em;
+  -webkit-text-fill-color: transparent;
+}
+.brand-wordmark.dark {
+  --brand-base: #ffffff;
+}
+/* Trailing accent dot that pulses next to the wordmark */
+.brand-pulse-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-left: 4px;
+  border-radius: 999px;
+  background: #0ecf81;
+  box-shadow: 0 0 10px rgba(14,207,129,.85);
+  vertical-align: middle;
+  animation: brand-pulse-dot 1.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .brand-wordmark { animation: none; background-position: 0 0; }
+  .brand-pulse-dot { animation: none; }
+}
+@keyframes cw-blink { 0%, 50% { opacity: 1; } 50.01%, 100% { opacity: 0; } }
+.cw-caret { animation: cw-blink 1.05s steps(2) infinite; border-radius: 1px; }
+@media (prefers-reduced-motion: reduce) {
+  .cw-caret { animation: none; opacity: 0.6; }
+}

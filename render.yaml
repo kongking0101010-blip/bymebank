@@ -1,0 +1,163 @@
+# Render Blueprint — one-click deploy of the whole Byme Bank stack.
+#
+# How to use:
+#   1. Push this repo to GitHub.
+#   2. On render.com → Blueprints → New Blueprint Instance → pick the repo.
+#   3. Render reads this file, creates all services + DB, asks for the
+#      "sync: false" env vars (your secrets), then builds.
+#   4. First build takes ~12 minutes (Maven cold cache + Vite + pip).
+#
+# What you get:
+#   • bymebank-server       — Spring Boot API   (Java 21, Postgres, Flyway)
+#   • bymebank-bridge       — Python bot bridge (FastAPI on 8090)
+#   • bymebank-dashboard    — React SPA          (Vite build, served by nginx)
+#   • bymebank-db           — Managed Postgres 16 (free tier)
+#
+# Free tier notes:
+#   • Web services sleep after 15 min idle then cold-start (~30 s).
+#   • Postgres free tier expires after 90 days; export your data before then.
+#   • Redis is NOT included — Spring falls back to in-memory rate limiting.
+
+databases:
+  - name: bymebank-db
+    plan: free
+    databaseName: bymebank
+    user: bymebank
+
+services:
+  # ─────────────────────────────────────────────────────────────────
+  # Spring Boot API
+  # ─────────────────────────────────────────────────────────────────
+  - type: web
+    name: bymebank-server
+    runtime: docker
+    plan: free
+    region: singapore
+    rootDir: server
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /actuator/health
+    autoDeploy: true
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: SERVER_PORT
+        value: 8080
+      - key: PORT
+        value: 8080
+      # DB — values pulled from the managed Postgres above.
+      # Render puts the connection string in DATABASE_URL; we map
+      # the parts Spring expects.
+      - key: DB_URL
+        fromDatabase:
+          name: bymebank-db
+          property: connectionString
+      - key: DB_USER
+        fromDatabase:
+          name: bymebank-db
+          property: user
+      - key: DB_PASS
+        fromDatabase:
+          name: bymebank-db
+          property: password
+
+      # Auth secrets — generated once by Render, persisted on the service.
+      - key: JWT_SECRET
+        generateValue: true
+      - key: API_KEY_ENC
+        generateValue: true
+      - key: OTP_SALT
+        generateValue: true
+
+      # Bridge wiring — the Python bridge talks to the bot, Spring talks to it.
+      - key: BRIDGE_URL
+        fromService:
+          name: bymebank-bridge
+          type: web
+          property: hostport         # e.g. bymebank-bridge.onrender.com:443
+      - key: BRIDGE_AUTH_TOKEN
+        sync: false                  # <-- USER SETS THIS (any 40-char string)
+
+      # Upstream KhmerBank Payment Gateway (apicheckpayment.onrender.com).
+      - key: APICHECKING_BASE_URL
+        value: https://apicheckpayment.onrender.com
+      - key: VPS_BASE_URL
+        value: https://apicheckpayment.onrender.com
+      - key: VPS_ADMIN_KEY
+        sync: false                  # <-- USER PASTES from .env
+      - key: VPS_CUSTOMER_KEY
+        sync: false                  # <-- USER PASTES from .env
+
+      # SMTP — send OTP + key-issued emails. Use Gmail app password.
+      - key: GMAIL_USERNAME
+        sync: false                  # <-- e.g. tholreach413@gmail.com
+      - key: GMAIL_APP_PASSWORD
+        sync: false                  # <-- 16-char Google App Password
+
+      # Branding
+      - key: MAIL_FROM_NAME
+        value: Byme Bank Payment Gateway
+      - key: PLATFORM_MERCHANT_NAME
+        value: Byme Bank Gateway
+
+      # Public URLs — Render fills these once the dashboard service exists.
+      - key: APP_BASE_URL
+        fromService:
+          name: bymebank-server
+          type: web
+          property: host
+      - key: APP_DASHBOARD_URL
+        fromService:
+          name: bymebank-dashboard
+          type: web
+          property: host
+
+      # First user signing in with this email auto-becomes admin.
+      - key: INITIAL_ADMIN_EMAIL
+        sync: false                  # <-- your email
+
+  # ─────────────────────────────────────────────────────────────────
+  # Python bot-bridge (FastAPI -> apicheckpayment Telegram bot)
+  # ─────────────────────────────────────────────────────────────────
+  - type: web
+    name: bymebank-bridge
+    runtime: docker
+    plan: free
+    region: singapore
+    rootDir: bot-bridge
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /healthz
+    autoDeploy: true
+    envVars:
+      - key: PORT
+        value: 8090
+      - key: APICHECKING_BOT_URL
+        value: https://apicheckpayment.onrender.com
+      - key: BRIDGE_AUTH_TOKEN
+        sync: false                  # <-- SAME value as on bymebank-server
+      - key: EXTERNAL_ISSUE_SECRET
+        sync: false                  # <-- the bot's external-issue secret
+      - key: BOT_ADMIN_KEY
+        sync: false                  # <-- the bot's admin key
+      - key: LOG_LEVEL
+        value: INFO
+
+  # ─────────────────────────────────────────────────────────────────
+  # React SPA — built once by Vite, served by nginx.
+  # API requests go to the Spring service via VITE_API_BASE.
+  # ─────────────────────────────────────────────────────────────────
+  - type: web
+    name: bymebank-dashboard
+    runtime: docker
+    plan: free
+    region: singapore
+    rootDir: admin-dashboard
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /
+    autoDeploy: true
+    envVars:
+      # Build-time API base — Vite bakes this into the bundle.
+      - key: VITE_API_BASE
+        fromService:
+          name: bymebank-server
+          type: web
+          property: host             # e.g. https://bymebank-server.onrender.com

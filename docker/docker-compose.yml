@@ -1,0 +1,76 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: kb-postgres
+    environment:
+      POSTGRES_DB: khmerbank
+      POSTGRES_USER: khmerbank
+      POSTGRES_PASSWORD: khmerbank
+    ports: ["5432:5432"]
+    volumes:
+      - kb_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U khmerbank"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: kb-redis
+    ports: ["6379:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+
+  bot-bridge:
+    build:
+      context: ../bot-bridge
+      dockerfile: Dockerfile
+    container_name: kb-bot-bridge
+    environment:
+      APICHECKING_BOT_URL: ${APICHECKING_BOT_URL:-https://apicheckpayment.onrender.com}
+      EXTERNAL_ISSUE_SECRET: ${EXTERNAL_ISSUE_SECRET:?EXTERNAL_ISSUE_SECRET must be set in .env}
+      BRIDGE_AUTH_TOKEN: ${BRIDGE_AUTH_TOKEN:?BRIDGE_AUTH_TOKEN must be set in .env}
+      LOG_LEVEL: INFO
+    ports: ["8090:8090"]
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8090/health',timeout=2).status==200 else 1)\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  server:
+    build:
+      context: ../server
+      dockerfile: Dockerfile
+    container_name: kb-server
+    depends_on:
+      postgres:   { condition: service_healthy }
+      redis:      { condition: service_healthy }
+      bot-bridge: { condition: service_healthy }
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_URL:  jdbc:postgresql://postgres:5432/khmerbank
+      DB_USER: khmerbank
+      DB_PASS: khmerbank
+      REDIS_HOST: redis
+      JWT_SECRET: ${JWT_SECRET:-please-change-me-very-long-secret-min-256-bits-aaaaaaaa}
+      API_KEY_ENC: ${API_KEY_ENC:-please-change-me-32-byte-aes-key}
+      BRIDGE_URL: http://bot-bridge:8090
+      BRIDGE_AUTH_TOKEN: ${BRIDGE_AUTH_TOKEN}
+    ports: ["8080:8080"]
+
+  dashboard:
+    build:
+      context: ../admin-dashboard
+      dockerfile: Dockerfile
+    container_name: kb-dashboard
+    depends_on: [server]
+    ports: ["5173:80"]
+
+volumes:
+  kb_pgdata:

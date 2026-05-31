@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Your KhmerBank API key is ready</title>
+</head>
+<body style="margin:0;padding:0;background:#f4f6f8;font-family:Inter,Arial,sans-serif;color:#0f172a;">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+  <tr><td align="center" style="padding:36px 16px;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"
+           style="max-width:560px;background:#ffffff;border-radius:18px;overflow:hidden;
+                  box-shadow:0 8px 24px rgba(15,23,42,0.06);">
+      <tr><td style="background:linear-gradient(135deg,#0d51d6,#0a3aa9);padding:24px 32px;">
+        <div style="color:#ffffff;font-size:18px;font-weight:800;letter-spacing:0.5px;">
+          API key issued ✓
+        </div>
+        <div style="color:#cfe0ff;font-size:11px;text-transform:uppercase;letter-spacing:2px;">
+          KhmerBank Payment Gateway
+        </div>
+      </td></tr>
+      <tr><td style="padding:28px 32px;">
+        <p style="margin:0 0 12px 0;color:#0f172a;font-size:14px;">
+          Hi <strong th:text="${fullName}">there</strong>,
+        </p>
+        <p style="margin:0 0 18px 0;color:#475569;font-size:14px;line-height:1.6;">
+          Your KhmerBank API key has been minted and is now active.
+          The full key is shown <strong>once</strong> in your dashboard — make sure
+          you've saved it.
+        </p>
+
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"
+               style="background:#0f172a;border-radius:12px;">
+          <tr><td style="padding:18px 22px;">
+            <div style="color:#94a3b8;font-size:10px;letter-spacing:2px;text-transform:uppercase;font-weight:700;">
+              Masked key
+            </div>
+            <code style="color:#34d399;font-size:14px;font-family:'Menlo','Consolas',monospace;
+                         word-break:break-all;display:block;margin-top:4px;"
+                  th:text="${maskedKey}">sk_xxxx...xxxx</code>
+          </td></tr>
+        </table>
+
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"
+               style="margin-top:18px;">
+          <tr>
+            <td style="padding:8px 0;color:#64748b;font-size:12px;width:120px;">Plan</td>
+            <td style="padding:8px 0;color:#0f172a;font-size:13px;font-weight:600;"
+                th:text="${plan}">1 Month</td>
+          </tr>
+          <tr>
+            <td style="padding:8px 0;color:#64748b;font-size:12px;">Merchant</td>
+            <td style="padding:8px 0;color:#0f172a;font-size:13px;font-weight:600;"
+                th:text="${merchantName}">Acme</td>
+          </tr>
+          <tr>
+            <td style="padding:8px 0;color:#64748b;font-size:12px;">Expires</td>
+            <td style="padding:8px 0;color:#0f172a;font-size:13px;font-weight:600;"
+                th:text="${expiresAt}">2026-06-27</td>
+          </tr>
+        </table>
+
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0"
+               style="margin-top:22px;">
+          <tr><td>
+            <a th:href="${dashboardUrl}" style="display:inline-block;padding:11px 20px;
+               background:#0d51d6;color:#ffffff;border-radius:10px;font-weight:700;
+               font-size:13px;text-decoration:none;">Open dashboard →</a>
+          </td></tr>
+        </table>
+      </td></tr>
+      <tr><td style="padding:18px 32px 28px 32px;border-top:1px solid #e2e8f0;
+                     color:#94a3b8;font-size:11px;line-height:1.6;">
+        Treat this key like a password. Anyone with it can charge customers
+        through your linked bank accounts.<br>
+        © <span th:text="${year}">2026</span> KhmerBank · Phnom Penh, Cambodia.
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body>
+</html>

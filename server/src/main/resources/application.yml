@@ -1,0 +1,145 @@
+spring:
+  application:
+    name: khmer-bank-gateway
+
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/khmerbank}
+    username: ${DB_USER:khmerbank}
+    password: ${DB_PASS:khmerbank}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+    open-in-view: false
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration/postgresql
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASS:}
+      timeout: 3000ms
+
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${GMAIL_USERNAME:${MAIL_USER:}}
+    password: ${GMAIL_APP_PASSWORD:${MAIL_PASS:}}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+server:
+  port: ${SERVER_PORT:8080}
+  compression:
+    enabled: true
+  error:
+    include-message: always
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:change-me-to-a-very-long-random-secret-min-256-bits-aaaaaaaa}
+    # 365 days — never auto-logout. User stays signed in until they hit Sign-Out.
+    access-token-expiry: 31536000000
+    refresh-token-expiry: 31536000000
+
+  api-key:
+    prefix: kb_
+    length: 48
+    encryption-key: ${API_KEY_ENC:another-strong-32-byte-aes-key-here}
+
+  bank:
+    aba:
+      base-url: ${ABA_BASE_URL:https://checkout-sandbox.payway.com.kh}
+      merchant-id: ${ABA_MERCHANT_ID:}
+      api-key: ${ABA_API_KEY:}
+      callback-url: ${APP_BASE_URL:http://localhost:8080}/api/v1/webhook/aba
+
+    acleda:
+      base-url: ${ACLEDA_BASE_URL:https://api-sandbox.acledabank.com.kh}
+      partner-id: ${ACLEDA_PARTNER_ID:}
+      partner-secret: ${ACLEDA_PARTNER_SECRET:}
+      callback-url: ${APP_BASE_URL:http://localhost:8080}/api/v1/webhook/acleda
+
+    wing:
+      base-url: ${WING_BASE_URL:https://sandbox.wingmoney.com}
+      partner-id: ${WING_PARTNER_ID:}
+      partner-secret: ${WING_PARTNER_SECRET:}
+      callback-url: ${APP_BASE_URL:http://localhost:8080}/api/v1/webhook/wing
+
+    bakong:
+      base-url: ${BAKONG_BASE_URL:https://api-bakong.nbc.gov.kh}
+      bakong-token: ${BAKONG_TOKEN:}
+      merchant-id: ${BAKONG_MERCHANT_ID:}
+      # If set, the gateway uses this VPS proxy instead of calling Bakong directly.
+      # The VPS owns the Bakong token and exposes /api/check-payment + /admin/keys/*.
+      vps-base-url: ${VPS_BASE_URL:}
+      vps-customer-key: ${VPS_CUSTOMER_KEY:}
+      vps-admin-key: ${VPS_ADMIN_KEY:}
+
+  pricing:
+    free:
+      monthly-quota: 100
+      price: 0
+    basic:
+      monthly-quota: 5000
+      price: 10
+    pro:
+      monthly-quota: -1
+      price: 50
+
+  rate-limit:
+    default-rpm: 60
+    burst: 10
+
+  mail:
+    from-name: ${MAIL_FROM_NAME:KhmerBank Payment Gateway}
+    dashboard-url: ${APP_DASHBOARD_URL:http://localhost:5173/app}
+
+  otp:
+    salt: ${OTP_SALT:khmerbank-otp-salt-change-in-prod}
+
+  google:
+    client-id: ${GOOGLE_CLIENT_ID:}
+
+  admin:
+    initial-email: ${INITIAL_ADMIN_EMAIL:}
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+
+logging:
+  level:
+    com.khmerbank: INFO
+    org.springframework.security: WARN

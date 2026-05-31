@@ -1,0 +1,43 @@
+{
+  "name": "khmerbank-dashboard",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview --port 4173",
+    "lint": "eslint . --ext .ts,.tsx"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.51.23",
+    "axios": "^1.7.5",
+    "clsx": "^2.1.1",
+    "framer-motion": "^11.3.21",
+    "lucide-react": "^0.439.0",
+    "qrcode.react": "^4.0.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-hot-toast": "^2.4.1",
+    "react-router-dom": "^6.26.1",
+    "recharts": "^2.12.7",
+    "tailwind-merge": "^2.5.2",
+    "three": "^0.134.0",
+    "vanta": "^0.5.24",
+    "zustand": "^4.5.5"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "@types/react": "^18.3.5",
+    "@types/react-dom": "^18.3.0",
+    "@types/three": "^0.184.1",
+    "@vitejs/plugin-react": "^4.3.1",
+    "autoprefixer": "^10.4.20",
+    "eslint": "^9.9.1",
+    "postcss": "^8.4.41",
+    "tailwindcss": "^3.4.10",
+    "terser": "^5.48.0",
+    "typescript": "^5.5.4",
+    "vite": "^5.4.2"
+  }
+}

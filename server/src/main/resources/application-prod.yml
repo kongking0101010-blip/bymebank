@@ -1,0 +1,86 @@
+# Production profile -- runs on Render against managed Postgres.
+# Wire env vars in Render dashboard, never commit secrets here.
+spring:
+  datasource:
+    # Render injects DATABASE_URL in the form:
+    #   postgres://user:pass@host:5432/dbname
+    # Spring needs jdbc:postgresql://host:5432/dbname plus username/password
+    # split out, so we override with explicit DB_URL/DB_USER/DB_PASS env vars
+    # that render.yaml maps from the database resource.
+    url: ${DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PASS}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: false
+    open-in-view: false
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration/postgresql
+
+  data:
+    redis:
+      # Optional. If REDIS_URL is unset Spring uses its in-memory fallback
+      # for rate-limit + nothing else (free tier, no Redis dyno required).
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASS:}
+      timeout: 3000ms
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${GMAIL_USERNAME:}
+    password: ${GMAIL_APP_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+
+bridge:
+  url: ${BRIDGE_URL:}
+  token: ${BRIDGE_AUTH_TOKEN:}
+  timeoutMs: 60000
+
+app:
+  bank:
+    bakong:
+      vps-base-url: ${APICHECKING_BASE_URL:https://apicheckpayment.onrender.com}
+      vps-admin-key: ${VPS_ADMIN_KEY:}
+      vps-customer-key: ${VPS_CUSTOMER_KEY:}
+
+  platform:
+    bakong-handle: ${PLATFORM_BAKONG_HANDLE:bymebank@aclb}
+    merchant-name: ${PLATFORM_MERCHANT_NAME:Byme Bank Gateway}
+
+  mail:
+    from-name: ${MAIL_FROM_NAME:Byme Bank Payment Gateway}
+    dashboard-url: ${APP_DASHBOARD_URL:}
+
+  admin:
+    initial-email: ${INITIAL_ADMIN_EMAIL:}
+
+server:
+  forward-headers-strategy: framework
+  tomcat:
+    accesslog:
+      enabled: false
+
+logging:
+  level:
+    com.khmerbank: INFO
+    org.springframework.security: WARN

@@ -1,0 +1,63 @@
+version: "3.9"
+
+# Local Oracle Database 23ai Free for development.
+# 4 GB+ RAM recommended. First boot can take 5-10 min while the DB is created.
+#
+# Connect with:
+#   jdbc:oracle:thin:@//localhost:1521/FREEPDB1
+#   user/pass: khmerbank / khmerbank   (created by 01-create-user.sql)
+#
+# Run with:
+#   docker compose -f docker-compose.oracle.yml up -d
+
+services:
+  oracle:
+    image: container-registry.oracle.com/database/free:latest
+    container_name: kb-oracle
+    environment:
+      ORACLE_PWD: oracle
+    ports:
+      - "1521:1521"
+    volumes:
+      - kb_oradata:/opt/oracle/oradata
+      - ./oracle-bootstrap:/opt/oracle/scripts/setup
+    healthcheck:
+      test: ["CMD", "/opt/oracle/checkDBStatus.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 20
+      start_period: 600s
+
+  redis:
+    image: redis:7-alpine
+    container_name: kb-redis
+    ports: ["6379:6379"]
+
+  server:
+    build:
+      context: ../server
+      dockerfile: Dockerfile
+    container_name: kb-server
+    depends_on:
+      oracle: { condition: service_healthy }
+      redis:  { condition: service_started }
+    environment:
+      SPRING_PROFILES_ACTIVE: oracle
+      DB_URL:  jdbc:oracle:thin:@//oracle:1521/FREEPDB1
+      DB_USER: khmerbank
+      DB_PASS: khmerbank
+      REDIS_HOST: redis
+      JWT_SECRET: ${JWT_SECRET:-please-change-me-very-long-secret-min-256-bits-aaaaaaaa}
+      API_KEY_ENC: ${API_KEY_ENC:-please-change-me-32-byte-aes-key}
+    ports: ["8080:8080"]
+
+  dashboard:
+    build:
+      context: ../admin-dashboard
+      dockerfile: Dockerfile
+    container_name: kb-dashboard
+    depends_on: [server]
+    ports: ["5173:80"]
+
+volumes:
+  kb_oradata:

@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "khmerbank"
+version = "1.0.0"
+description = "Official Python SDK for the Khmer Bank Gateway (ABA, Wing, Bakong)"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "KhmerBank Team" }]
+keywords = ["khmer", "bank", "cambodia", "khqr", "bakong", "aba", "wing", "payment"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Office/Business :: Financial",
+]
+dependencies = [
+    "requests>=2.31",
+    "pydantic>=2.5",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "pytest-mock>=3.10",
+    "ruff>=0.5",
+    "mypy>=1.8",
+]
+
+[project.urls]
+Homepage = "https://github.com/khmerbank/sdk-python"
+Documentation = "https://docs.khmerbank.dev"
+
+[tool.setuptools.packages.find]
+include = ["khmerbank*"]

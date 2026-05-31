@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Your KhmerBank verification code</title>
+</head>
+<body style="margin:0;padding:0;background:#f4f6f8;font-family:Inter,Arial,sans-serif;color:#0f172a;">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+  <tr><td align="center" style="padding:36px 16px;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"
+           style="max-width:480px;background:#ffffff;border-radius:18px;overflow:hidden;
+                  box-shadow:0 8px 24px rgba(15,23,42,0.06);">
+      <tr><td style="background:linear-gradient(135deg,#0d51d6,#0a3aa9);padding:24px 32px;">
+        <div style="color:#ffffff;font-size:18px;font-weight:800;letter-spacing:0.5px;">
+          KhmerBank
+        </div>
+        <div style="color:#cfe0ff;font-size:11px;text-transform:uppercase;letter-spacing:2px;">
+          Payment Gateway
+        </div>
+      </td></tr>
+      <tr><td style="padding:28px 32px;">
+        <p style="margin:0 0 14px 0;color:#475569;font-size:14px;">Hello,</p>
+        <p style="margin:0 0 18px 0;color:#0f172a;font-size:14px;line-height:1.55;">
+          Use this code to sign in to your KhmerBank dashboard.
+        </p>
+        <div style="background:#f1f5fb;border-radius:14px;padding:24px;text-align:center;
+                    font-size:34px;font-weight:800;letter-spacing:8px;color:#0d51d6;
+                    font-family:'Menlo','Consolas',monospace;">
+          <span th:text="${code}">000000</span>
+        </div>
+        <p style="margin:18px 0 0 0;color:#64748b;font-size:12.5px;line-height:1.55;">
+          This code expires in <strong th:text="${minutes}">10</strong> minutes.
+          If you didn't ask for this, you can safely ignore this email.
+        </p>
+      </td></tr>
+      <tr><td style="padding:18px 32px 28px 32px;border-top:1px solid #e2e8f0;
+                     color:#94a3b8;font-size:11px;line-height:1.6;">
+        Sent to <span th:text="${email}">user@example.com</span>.
+        © <span th:text="${year}">2026</span> KhmerBank · Phnom Penh, Cambodia.
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body>
+</html>
