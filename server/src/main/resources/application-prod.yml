@@ -2,12 +2,10 @@
 # Wire env vars in Render dashboard, never commit secrets here.
 spring:
   datasource:
-    # Render injects DATABASE_URL in the form:
-    #   postgres://user:pass@host:5432/dbname
-    # Spring needs jdbc:postgresql://host:5432/dbname plus username/password
-    # split out, so we override with explicit DB_URL/DB_USER/DB_PASS env vars
-    # that render.yaml maps from the database resource.
-    url: ${DB_URL}
+    # Render exposes the DB as discrete host/port/name pieces. We build the
+    # JDBC URL here because Render's connectionString is postgres://… which
+    # the Postgres JDBC driver does NOT accept (needs jdbc:postgresql://…).
+    url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}
     username: ${DB_USER}
     password: ${DB_PASS}
     driver-class-name: org.postgresql.Driver

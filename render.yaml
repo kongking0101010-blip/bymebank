@@ -45,12 +45,20 @@ services:
       - key: PORT
         value: 8080
       # DB — values pulled from the managed Postgres above.
-      # Render puts the connection string in DATABASE_URL; we map
-      # the parts Spring expects.
-      - key: DB_URL
+      # We map discrete host/port/name so application-prod.yml can build a
+      # proper jdbc:postgresql:// URL (the JDBC driver rejects postgres://).
+      - key: DB_HOST
         fromDatabase:
           name: bymebank-db
-          property: connectionString
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: bymebank-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: bymebank-db
+          property: database
       - key: DB_USER
         fromDatabase:
           name: bymebank-db
