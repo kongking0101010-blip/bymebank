@@ -82,6 +82,27 @@ server:
     accesslog:
       enabled: false
 
+# Free tier has no Redis. Exclude Redis auto-config so the app doesn't hang
+# trying to reach localhost:6379 on boot, and drop Redis + DB-less probes
+# from the health endpoint so Render's health check passes as soon as the
+# HTTP port is open.
+spring.autoconfigure.exclude: >
+  org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration,
+  org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+
+management:
+  health:
+    redis:
+      enabled: false
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
 logging:
   level:
     com.khmerbank: INFO
