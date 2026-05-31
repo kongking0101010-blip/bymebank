@@ -21,6 +21,7 @@
 databases:
   - name: bymebank-db
     plan: free
+    region: oregon
     databaseName: bymebank
     user: bymebank
 
@@ -32,7 +33,7 @@ services:
     name: bymebank-server
     runtime: docker
     plan: free
-    region: singapore
+    region: oregon
     rootDir: server
     dockerfilePath: ./Dockerfile
     healthCheckPath: /actuator/health
@@ -130,7 +131,7 @@ services:
     name: bymebank-bridge
     runtime: docker
     plan: free
-    region: singapore
+    region: oregon
     rootDir: bot-bridge
     dockerfilePath: ./Dockerfile
     healthCheckPath: /healthz
@@ -157,7 +158,7 @@ services:
     name: bymebank-dashboard
     runtime: docker
     plan: free
-    region: singapore
+    region: oregon
     rootDir: admin-dashboard
     dockerfilePath: ./Dockerfile
     healthCheckPath: /
