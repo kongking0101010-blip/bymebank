@@ -15,7 +15,11 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: validate
+      # 'update' (not 'validate') so Hibernate reconciles any drift between
+      # the JPA entities and the ported Postgres schema on first boot. Flyway
+      # still owns the base schema; this just patches missing columns/types
+      # so a fresh prod DB comes up clean.
+      ddl-auto: update
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
