@@ -48,7 +48,9 @@ public class BrandingService {
                            @Value("${bridge.token:${BRIDGE_AUTH_TOKEN:}}") String bridgeToken) {
         HttpClient httpClient = HttpClient.create()
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10_000)
-                .responseTimeout(Duration.ofSeconds(15));
+                // 60s — the bridge free-tier dyno cold-starts in ~15-30s. A
+                // short timeout here means a sleeping bridge yields empty logos.
+                .responseTimeout(Duration.ofSeconds(60));
         this.bridge = builder
                 .baseUrl(normalizeUrl(bridgeUrl))
                 .clientConnector(new ReactorClientHttpConnector(httpClient))
@@ -166,7 +168,7 @@ public class BrandingService {
                             .build())
                     .retrieve()
                     .bodyToMono(BridgeLogosResponse.class)
-                    .timeout(Duration.ofSeconds(15))
+                    .timeout(Duration.ofSeconds(60))
                     .block();
 
             Map<String, String> logos = sanitise(resp == null ? null : resp.getLogos());
