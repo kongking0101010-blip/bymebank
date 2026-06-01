@@ -7,7 +7,9 @@ const api = axios.create({
   // VITE_API_BASE here — a stale build-time env var on the host once baked a
   // bad absolute base into the bundle and broke login with a 405.
   baseURL: "/",
-  timeout: 30_000,
+  // 60s — the free-tier backend sleeps after 15 min idle and cold-starts in
+  // ~40s. A 30s timeout would fail the very first request after a nap.
+  timeout: 60_000,
 });
 
 api.interceptors.request.use((config) => {
