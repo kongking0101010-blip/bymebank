@@ -50,10 +50,28 @@ public class BrandingService {
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10_000)
                 .responseTimeout(Duration.ofSeconds(15));
         this.bridge = builder
-                .baseUrl(bridgeUrl)
+                .baseUrl(normalizeUrl(bridgeUrl))
                 .clientConnector(new ReactorClientHttpConnector(httpClient))
                 .defaultHeader("X-Bridge-Token", bridgeToken)
                 .build();
+    }
+
+    /**
+     * Render injects {@code BRIDGE_URL} from the bridge service's
+     * {@code hostport} property — e.g. {@code bymebank-bridge.onrender.com:443}
+     * — which has NO scheme. WebClient needs an absolute URL with a scheme or
+     * it silently fails every call (and we'd serve empty logos forever). So if
+     * the value doesn't already start with http(s), prepend https://. A bare
+     * ":443"/":80" port suffix is dropped since the scheme implies it.
+     */
+    static String normalizeUrl(String raw) {
+        if (raw == null || raw.isBlank()) return "http://localhost:8090";
+        String url = raw.trim();
+        if (!url.startsWith("http://") && !url.startsWith("https://")) {
+            url = url.replaceFirst(":443$", "").replaceFirst(":80$", "");
+            url = "https://" + url;
+        }
+        return url;
     }
 
     /** Public read used by the controller. Refreshes on demand if the

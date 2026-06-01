@@ -62,15 +62,31 @@ public class ApiCheckingClient {
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10_000)
                 .responseTimeout(Duration.ofMillis(timeoutMs <= 0 ? 90_000 : timeoutMs));
         this.client = builder
-                .baseUrl(bridgeUrl)
+                .baseUrl(normalizeBridgeUrl(bridgeUrl))
                 .clientConnector(new ReactorClientHttpConnector(httpClient))
                 .defaultHeader("X-Bridge-Token", bridgeToken)
                 .build();
         this.bridgeToken = bridgeToken;
         this.upstreamBaseUrl = upstreamBaseUrl;
         log.info("ApiCheckingClient → {}  tokenConfigured={}  upstream={}",
-                bridgeUrl, bridgeToken != null && !bridgeToken.isBlank(),
+                normalizeBridgeUrl(bridgeUrl), bridgeToken != null && !bridgeToken.isBlank(),
                 upstreamBaseUrl);
+    }
+
+    /**
+     * Render injects {@code BRIDGE_URL} from the bridge service's
+     * {@code hostport} property (e.g. {@code bymebank-bridge.onrender.com:443})
+     * which has no scheme. WebClient requires an absolute URL or every call
+     * fails silently, so prepend https:// when the scheme is missing.
+     */
+    static String normalizeBridgeUrl(String raw) {
+        if (raw == null || raw.isBlank()) return "http://localhost:8090";
+        String url = raw.trim();
+        if (!url.startsWith("http://") && !url.startsWith("https://")) {
+            url = url.replaceFirst(":443$", "").replaceFirst(":80$", "");
+            url = "https://" + url;
+        }
+        return url;
     }
 
     /* ────────── 1. issue_key (retried) ────────── */
