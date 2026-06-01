@@ -163,10 +163,6 @@ services:
     dockerfilePath: ./Dockerfile
     healthCheckPath: /
     autoDeploy: true
-    envVars:
-      # Build-time API base — Vite bakes this into the bundle.
-      - key: VITE_API_BASE
-        fromService:
-          name: bymebank-server
-          type: web
-          property: host             # e.g. https://bymebank-server.onrender.com
+    # No VITE_API_BASE — the SPA calls same-origin /api/* paths and nginx
+    # (see admin-dashboard/nginx.conf) reverse-proxies them to the Spring
+    # backend. This avoids the build-time env-var problem and CORS entirely.
