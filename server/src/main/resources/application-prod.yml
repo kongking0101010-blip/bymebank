@@ -97,6 +97,12 @@ management:
   health:
     redis:
       enabled: false
+    # The mail health indicator opens an SMTP socket to Gmail on every
+    # /actuator/health hit. On Render's free tier that probe hangs and makes
+    # the health check time out, so disable it — SMTP is still used for
+    # sending OTP/email at runtime, just not health-probed.
+    mail:
+      enabled: false
   endpoint:
     health:
       probes:
