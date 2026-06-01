@@ -209,7 +209,7 @@ export default function Login() {
       {/* Brand panel */}
       <div className="hidden lg:flex relative z-10 text-white">
         <div className="relative z-10 flex flex-col justify-between p-12 w-full">
-          <Logo />
+          <Logo dark />
           <div>
             <motion.h1
               initial={{ opacity: 0, y: 20 }}
@@ -250,7 +250,7 @@ export default function Login() {
           animate={{ opacity: 1, y: 0 }}
           className="w-full max-w-md rounded-2xl bg-white/[.04] ring-1 ring-white/10 backdrop-blur-xl p-7 sm:p-9 shadow-[0_24px_60px_-20px_rgba(0,0,0,.6)]"
         >
-          <div className="lg:hidden mb-6"><Logo /></div>
+          <div className="lg:hidden mb-6"><Logo dark /></div>
 
           <h2 className="text-3xl font-semibold text-white tracking-tight">
             {step.kind === "password" ? `Welcome back, ${step.existing.fullName?.split(" ")[0] ?? ""}` : "Sign in"}
