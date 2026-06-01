@@ -2,7 +2,11 @@ import axios, { AxiosError, AxiosResponse } from "axios";
 import { useAuthStore } from "@/store/auth";
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE ?? "/",
+  // Always same-origin. nginx (see admin-dashboard/nginx.conf) reverse-proxies
+  // /api/* and /auth/* to the Spring backend. We intentionally do NOT read
+  // VITE_API_BASE here — a stale build-time env var on the host once baked a
+  // bad absolute base into the bundle and broke login with a 405.
+  baseURL: "/",
   timeout: 30_000,
 });
 

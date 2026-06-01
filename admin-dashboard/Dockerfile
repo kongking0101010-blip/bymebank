@@ -2,11 +2,11 @@
 FROM node:20-alpine AS build
 WORKDIR /app
 
-# VITE_API_BASE is baked into the bundle at build time (Vite compile-time
-# env). Render passes it via --build-arg from the dashboard service's
-# VITE_API_BASE env var.
-ARG VITE_API_BASE=/
-ENV VITE_API_BASE=$VITE_API_BASE
+# API base is ALWAYS same-origin ("/") — nginx reverse-proxies /api/* and
+# /auth/* to the Spring backend (see nginx.conf). We hardcode it here and the
+# client also hardcodes "/", so a stray VITE_API_BASE env var on the host can
+# never bake a bad absolute URL into the bundle again.
+ENV VITE_API_BASE=/
 
 COPY package*.json ./
 RUN npm ci
