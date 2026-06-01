@@ -62,7 +62,11 @@ spring:
             required: true
 
 bridge:
-  url: ${BRIDGE_URL:}
+  # Default to the real Render bridge URL so logos work even if the BRIDGE_URL
+  # env var is empty or set to the schemeless "host:443" hostport form (which
+  # WebClient rejects). BrandingService also normalizes the scheme. This prod
+  # default means a redeploy/blueprint-sync can never silently break branding.
+  url: ${BRIDGE_URL:https://bymebank-bridge.onrender.com}
   token: ${BRIDGE_AUTH_TOKEN:}
   timeoutMs: 60000
 

@@ -78,11 +78,12 @@ services:
         generateValue: true
 
       # Bridge wiring — the Python bridge talks to the bot, Spring talks to it.
+      # Hardcode the full HTTPS URL. Do NOT derive from the service "hostport"
+      # property — that yields a schemeless "bymebank-bridge.onrender.com:443"
+      # which Spring's WebClient rejects, silently breaking logo fetches. A
+      # literal value also survives blueprint syncs / redeploys.
       - key: BRIDGE_URL
-        fromService:
-          name: bymebank-bridge
-          type: web
-          property: hostport         # e.g. bymebank-bridge.onrender.com:443
+        value: https://bymebank-bridge.onrender.com
       - key: BRIDGE_AUTH_TOKEN
         sync: false                  # <-- USER SETS THIS (any 40-char string)
 
