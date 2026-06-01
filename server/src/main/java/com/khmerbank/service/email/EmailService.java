@@ -1,23 +1,34 @@
 package com.khmerbank.service.email;
 
-import lombok.RequiredArgsConstructor;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.MediaType;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
 import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.Instant;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
- * Sends branded HTML emails via Spring Mail (Gmail SMTP).
+ * Sends branded HTML emails.
+ *
+ * <p><b>Why two transports?</b> Render (and most cloud hosts running on AWS)
+ * block outbound SMTP ports 25/465/587 at the infrastructure level, so
+ * JavaMail/Gmail SMTP hangs forever in production. When {@code BREVO_API_KEY}
+ * is set we send over Brevo's HTTPS transactional API (port 443, never
+ * blocked). Locally — no Brevo key — we fall back to SMTP so dev still works.
  *
  * <p>Two flavors:
  * <ul>
@@ -26,30 +37,39 @@ import java.util.Map;
  * </ul>
  */
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class EmailService {
 
     private final JavaMailSender mailSender;
     private final TemplateEngine templateEngine;
+    private final ObjectMapper json = new ObjectMapper();
+    private final WebClient brevo;
 
     @Value("${spring.mail.username:}")
     private String fromAddress;
 
-    @Value("${app.mail.from-name:KhmerBank Payment Gateway}")
+    @Value("${app.mail.from-name:Byme Bank Payment Gateway}")
     private String fromName;
 
     @Value("${app.mail.dashboard-url:http://localhost:5173/app}")
     private String dashboardUrl;
 
+    /** Brevo HTTPS API key. When blank we use SMTP (local dev). */
+    @Value("${BREVO_API_KEY:${app.mail.brevo-key:}}")
+    private String brevoApiKey;
+
+    public EmailService(JavaMailSender mailSender, TemplateEngine templateEngine) {
+        this.mailSender = mailSender;
+        this.templateEngine = templateEngine;
+        this.brevo = WebClient.builder()
+                .baseUrl("https://api.brevo.com/v3")
+                .build();
+    }
+
     /**
-     * Send a 6-digit OTP. The code is included in the template so the user
-     * can read it; never logged.
-     */
-    /**
-     * Send a 6-digit OTP. Throws if Gmail isn't configured or Gmail rejects
-     * — we want the request to fail so the user sees a clear error rather
-     * than a 200 with a code that never arrives.
+     * Send a 6-digit OTP. Throws if delivery fails — we want the request to
+     * fail loudly so the user sees a clear error rather than a 200 with a code
+     * that never arrives.
      */
     public void sendOtp(String email, String code, int validMinutes) {
         Context ctx = new Context();
@@ -59,15 +79,15 @@ public class EmailService {
         ctx.setVariable("year", Instant.now().toString().substring(0, 4));
         String html = templateEngine.process("email/otp", ctx);
 
-        // Plain-text fallback significantly improves Gmail deliverability.
+        // Plain-text fallback significantly improves deliverability.
         String plain = String.format(
-                "Your KhmerBank verification code: %s%n%n" +
+                "Your Byme Bank verification code: %s%n%n" +
                 "This code expires in %d minutes.%n" +
                 "If you didn't request this, ignore this email.%n%n" +
-                "— KhmerBank Payment Gateway",
+                "— Byme Bank Payment Gateway",
                 code, validMinutes);
 
-        send(email, "KhmerBank: " + code + " is your verification code", html, plain);
+        send(email, "Byme Bank: " + code + " is your verification code", html, plain);
     }
 
     /**
@@ -82,7 +102,7 @@ public class EmailService {
         ctx.setVariable("year", Instant.now().toString().substring(0, 4));
         String html = templateEngine.process("email/key_issued", ctx);
         String plain = String.format(
-                "Your KhmerBank API key is ready.%n%n" +
+                "Your Byme Bank API key is ready.%n%n" +
                 "Plan: %s%n" +
                 "Merchant: %s%n" +
                 "Expires: %s%n" +
@@ -91,35 +111,71 @@ public class EmailService {
                 vars.get("plan"), vars.get("merchantName"),
                 vars.get("expiresAt"), vars.get("maskedKey"),
                 dashboardUrl);
-        send(email, "Your KhmerBank API key is ready", html, plain);
+        send(email, "Your Byme Bank API key is ready", html, plain);
     }
 
     private void send(String to, String subject, String html, String plain) {
         if (fromAddress == null || fromAddress.isBlank()) {
             throw new IllegalStateException(
-                    "Mail not configured: set GMAIL_USERNAME and GMAIL_APP_PASSWORD env vars.");
+                    "Mail not configured: set GMAIL_USERNAME (sender address) env var.");
         }
+        if (brevoApiKey != null && !brevoApiKey.isBlank()) {
+            sendViaBrevo(to, subject, html, plain);
+        } else {
+            sendViaSmtp(to, subject, html, plain);
+        }
+    }
+
+    /** HTTPS transactional send — works on Render where SMTP is blocked. */
+    private void sendViaBrevo(String to, String subject, String html, String plain) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        Map<String, String> sender = new LinkedHashMap<>();
+        sender.put("email", fromAddress);
+        sender.put("name", fromName);
+        body.put("sender", sender);
+        body.put("to", List.of(Map.of("email", to)));
+        body.put("subject", subject);
+        body.put("htmlContent", html);
+        if (plain != null && !plain.isBlank()) body.put("textContent", plain);
+        try {
+            String payload = json.writeValueAsString(body);
+            brevo.post()
+                    .uri("/smtp/email")
+                    .header("api-key", brevoApiKey)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .accept(MediaType.APPLICATION_JSON)
+                    .bodyValue(payload)
+                    .retrieve()
+                    .toBodilessEntity()
+                    .timeout(Duration.ofSeconds(20))
+                    .block();
+            log.info("mail sent (brevo) subject='{}' to={}", subject, mask(to));
+        } catch (Exception e) {
+            log.error("mail send failed (brevo) subject='{}' to={}: {}",
+                    subject, mask(to), e.getMessage());
+            throw new RuntimeException("Mail delivery failed: " + e.getMessage(), e);
+        }
+    }
+
+    /** Classic SMTP — used only for local dev (Render blocks SMTP ports). */
+    private void sendViaSmtp(String to, String subject, String html, String plain) {
         try {
             MimeMessage msg = mailSender.createMimeMessage();
-            // multipart=true lets us attach a plain-text alternative.
             MimeMessageHelper h = new MimeMessageHelper(msg, true, "UTF-8");
             h.setFrom(new InternetAddress(fromAddress, fromName, StandardCharsets.UTF_8.name()));
             h.setReplyTo(fromAddress);
             h.setTo(to);
             h.setSubject(subject);
-            // Order matters — plain first, HTML second, so clients render HTML
-            // but spam filters see we're not HTML-only.
             h.setText(plain == null ? stripHtml(html) : plain, html);
-            // Help Gmail tag this as a transactional notification.
             msg.setHeader("X-Priority", "1");
             msg.setHeader("X-Auto-Response-Suppress", "All");
             msg.setHeader("Auto-Submitted", "auto-generated");
             msg.setHeader("List-Unsubscribe",
                     "<mailto:" + fromAddress + "?subject=unsubscribe>");
             mailSender.send(msg);
-            log.info("mail sent subject='{}' to={}", subject, mask(to));
+            log.info("mail sent (smtp) subject='{}' to={}", subject, mask(to));
         } catch (Exception e) {
-            log.error("mail send failed subject='{}' to={}: {}",
+            log.error("mail send failed (smtp) subject='{}' to={}: {}",
                     subject, mask(to), e.getMessage());
             throw new RuntimeException("Mail delivery failed: " + e.getMessage(), e);
         }

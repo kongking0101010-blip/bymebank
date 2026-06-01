@@ -102,6 +102,13 @@ services:
       - key: GMAIL_APP_PASSWORD
         sync: false                  # <-- 16-char Google App Password
 
+      # Email delivery over HTTPS (Brevo). Render blocks outbound SMTP ports
+      # (25/465/587) at the infra level, so OTP email via Gmail SMTP hangs.
+      # Brevo's transactional API uses port 443 and works. Free: 300/day.
+      # GMAIL_USERNAME above is still used as the verified "from" address.
+      - key: BREVO_API_KEY
+        sync: false                  # <-- paste your Brevo API key (xkeysib-...)
+
       # Branding
       - key: MAIL_FROM_NAME
         value: Byme Bank Payment Gateway

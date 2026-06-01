@@ -49,6 +49,14 @@ spring:
       mail:
         smtp:
           auth: true
+          # Fail fast instead of hanging forever. Render blocks outbound SMTP
+          # (ports 25/465/587) at the infra level, so without these timeouts a
+          # send would block the request thread indefinitely. Prod should use
+          # the Brevo HTTPS API (BREVO_API_KEY) — these caps just stop a hang
+          # if SMTP is ever attempted.
+          connectiontimeout: 8000
+          timeout: 8000
+          writetimeout: 8000
           starttls:
             enable: true
             required: true
