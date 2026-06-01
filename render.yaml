@@ -41,10 +41,10 @@ services:
     envVars:
       - key: SPRING_PROFILES_ACTIVE
         value: prod
-      - key: SERVER_PORT
-        value: 8080
-      - key: PORT
-        value: 8080
+      # NOTE: do NOT set PORT/SERVER_PORT here. Render assigns its own $PORT
+      # (e.g. 10000) and routes health checks + traffic to it. The app reads
+      # ${PORT} in application-prod.yml, so leaving these unset lets Render's
+      # injected PORT win.
       # DB — values pulled from the managed Postgres above.
       # We map discrete host/port/name so application-prod.yml can build a
       # proper jdbc:postgresql:// URL (the JDBC driver rejects postgres://).
