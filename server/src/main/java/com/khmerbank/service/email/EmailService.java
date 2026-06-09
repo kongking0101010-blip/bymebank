@@ -67,9 +67,24 @@ public class EmailService {
     }
 
     /**
-     * Send a 6-digit OTP. Throws if delivery fails — we want the request to
-     * fail loudly so the user sees a clear error rather than a 200 with a code
-     * that never arrives.
+     * Fire-and-forget OTP send. Runs on the {@code mailExecutor} pool so the
+     * login HTTP request returns instantly ("code sent") instead of blocking
+     * while we talk to Brevo/SMTP. Delivery failures are logged, never thrown
+     * — the user can hit "Resend" if a code doesn't arrive. This is what keeps
+     * sign-in smooth and free of request timeouts.
+     */
+    @Async("mailExecutor")
+    public void sendOtpAsync(String email, String code, int validMinutes) {
+        try {
+            sendOtp(email, code, validMinutes);
+        } catch (Exception e) {
+            log.error("async OTP send failed to {}: {}", mask(email), e.getMessage());
+        }
+    }
+
+    /**
+     * Send a 6-digit OTP. Throws if delivery fails. Prefer {@link #sendOtpAsync}
+     * from request paths so the caller is never blocked on mail delivery.
      */
     public void sendOtp(String email, String code, int validMinutes) {
         Context ctx = new Context();
@@ -94,7 +109,7 @@ public class EmailService {
      * Notify the user their sk_ key has been issued. Always sends the
      * masked key — never the full secret.
      */
-    @Async
+    @Async("mailExecutor")
     public void sendKeyIssued(String email, Map<String, Object> vars) {
         Context ctx = new Context();
         vars.forEach(ctx::setVariable);

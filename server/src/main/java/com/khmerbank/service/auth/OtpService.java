@@ -63,16 +63,14 @@ public class OtpService {
                 .purpose(purpose)
                 .expiresAt(Instant.now().plus(Duration.ofMinutes(VALID_MINUTES)))
                 .build();
-        row = repo.save(row);
-        try {
-            email.sendOtp(e, code, VALID_MINUTES);
-        } catch (Exception sendEx) {
-            // Roll back the OTP row so the user isn't stuck on a code that never arrived.
-            repo.delete(row);
-            log.error("OTP send failed for {}: {}", mask(e), sendEx.getMessage());
-            throw ApiException.internal("MAIL_FAILED",
-                    "Could not send the code. Check Gmail SMTP settings.");
-        }
+        repo.save(row);
+        // Fire-and-forget: hand the email to the background mail pool and
+        // return immediately. The OTP row is already persisted, so the code
+        // is valid the moment it lands in the user's inbox. This keeps the
+        // login request instant (no waiting on Brevo/SMTP) and removes the
+        // request timeout users were hitting. Delivery failures are logged by
+        // EmailService; the UI offers a "Resend" if a code doesn't arrive.
+        email.sendOtpAsync(e, code, VALID_MINUTES);
         log.info("otp issued purpose={} email={}", purpose, mask(e));
     }
 
