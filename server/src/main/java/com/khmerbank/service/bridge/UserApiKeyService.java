@@ -481,6 +481,36 @@ public class UserApiKeyService {
         if (apiKey != null) BANKS_CACHE.remove(apiKey);
     }
 
+    /**
+     * Cached banks ONLY — never touches the upstream. Returns {@code null} when
+     * the cache isn't warm. Use this on hot request paths (e.g. the dashboard
+     * Overview) so a cold upstream can't freeze the page; pair it with
+     * {@link #refreshBanksAsync} to warm the cache in the background.
+     */
+    public BanksLookup banksLookupCached(UserApiKey k) {
+        if (k == null || k.getApiKey() == null || k.getApiKey().isBlank()) return null;
+        BanksLookup cached = BANKS_CACHE.get(k.getApiKey());
+        if (cached != null && cached.valid()
+                && (System.currentTimeMillis() - cached.cachedAt()) < BANKS_CACHE_TTL_MS) {
+            return cached;
+        }
+        return null;
+    }
+
+    /**
+     * Warm the banks cache off the request thread. Fire-and-forget: the current
+     * request returns immediately and the next page load gets fresh data.
+     */
+    @org.springframework.scheduling.annotation.Async("bgExecutor")
+    public void refreshBanksAsync(UserApiKey k) {
+        try {
+            banksLookupFor(k);
+        } catch (Exception e) {
+            log.debug("async banks refresh failed for key id={}: {}",
+                    k == null ? null : k.getId(), e.getMessage());
+        }
+    }
+
     /** 30 s aligns with the dashboard's expected staleness window. */
     private static final long BANKS_CACHE_TTL_MS = 30_000L;
     private static final java.util.concurrent.ConcurrentHashMap<String, BanksLookup>

@@ -25,16 +25,14 @@ export default function Overview() {
     queryKey: ["me", "overview"],
     queryFn: () => apiGet("/api/v1/me/overview"),
     refetchInterval: 30_000,
+    // Keep showing the last data while refetching so the page never blanks out.
+    placeholderData: (prev) => prev,
   });
 
-  if (q.isLoading) {
-    return (
-      <div className="grid place-items-center py-20 text-ink-400">
-        <Loader2 className="animate-spin" size={26}/>
-      </div>
-    );
-  }
-
+  // Note: we intentionally do NOT block the whole page on a spinner. The KPI
+  // cards and key card all handle missing data with sensible fallbacks, so we
+  // render the full layout immediately and let values fill in. This makes the
+  // dashboard feel instant instead of staring at a centered loader.
   const d = q.data;
   const days = d?.activeKey?.daysRemaining ?? -1;
   const expiryColor =
@@ -45,7 +43,10 @@ export default function Overview() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-extrabold tracking-tight">Overview</h1>
+        <h1 className="text-2xl font-extrabold tracking-tight flex items-center gap-2">
+          Overview
+          {q.isFetching && <Loader2 className="animate-spin text-ink-400" size={16}/>}
+        </h1>
         <p className="text-ink-500 mt-1">Your Byme Bank workspace at a glance.</p>
       </div>
 

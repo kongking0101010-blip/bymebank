@@ -61,27 +61,34 @@ public class MeOverviewController {
         out.put("tx30d", bucket(user, now.minus(30, ChronoUnit.DAYS)));
 
         // "Linked banks" must match what the rest of the dashboard shows
-        // (Test page, Buy wizard, Keys page) — i.e. banks the active sk_
-        // is actually registered for upstream, not local Merchant rows.
-        // Falls back to the local list when no active key exists yet.
+        // (Test page, Buy wizard, Keys page). We must NEVER block the whole
+        // dashboard on a cold upstream call here — so use the cached upstream
+        // result if it's warm, otherwise fall back to the local Merchant rows
+        // immediately and kick off a background refresh so the next load is
+        // accurate. This keeps the Overview snappy even when the upstream is
+        // asleep.
         List<String> banks;
         if (active != null) {
-            UserApiKeyService.BanksLookup lookup = userApiKeyService.banksLookupFor(active);
-            if (lookup.valid() && !lookup.banks().isEmpty()) {
-                banks = lookup.banks();
+            UserApiKeyService.BanksLookup cached = userApiKeyService.banksLookupCached(active);
+            if (cached != null && cached.valid() && !cached.banks().isEmpty()) {
+                banks = cached.banks();
             } else {
-                banks = merchantRepository.findByUserOrderByCreatedAtDesc(user).stream()
-                        .map(m -> m.getBankType().name().toLowerCase())
-                        .distinct().toList();
+                banks = localBanks(user);
+                // Warm the upstream cache off the request thread.
+                userApiKeyService.refreshBanksAsync(active);
             }
         } else {
-            banks = merchantRepository.findByUserOrderByCreatedAtDesc(user).stream()
-                    .map(m -> m.getBankType().name().toLowerCase())
-                    .distinct().toList();
+            banks = localBanks(user);
         }
         out.put("banksLinked", banks);
 
         return ApiResponse.ok(out);
+    }
+
+    private List<String> localBanks(User user) {
+        return merchantRepository.findByUserOrderByCreatedAtDesc(user).stream()
+                .map(m -> m.getBankType().name().toLowerCase())
+                .distinct().toList();
     }
 
     private Map<String, Object> bucket(User user, Instant after) {

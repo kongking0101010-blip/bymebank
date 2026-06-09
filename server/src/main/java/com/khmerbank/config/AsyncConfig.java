@@ -35,4 +35,24 @@ public class AsyncConfig {
         ex.initialize();
         return ex;
     }
+
+    /**
+     * General background pool for fire-and-forget work that must NOT block a
+     * request — e.g. warming the upstream "linked banks" cache so the dashboard
+     * Overview returns instantly instead of waiting on a cold upstream call.
+     */
+    @Bean(name = "bgExecutor")
+    public Executor bgExecutor() {
+        ThreadPoolTaskExecutor ex = new ThreadPoolTaskExecutor();
+        ex.setCorePoolSize(2);
+        ex.setMaxPoolSize(6);
+        ex.setQueueCapacity(200);
+        ex.setThreadNamePrefix("bg-");
+        // Drop the task if we're swamped — it's a best-effort cache warm, the
+        // next page load will try again. Never block the caller.
+        ex.setRejectedExecutionHandler(new ThreadPoolExecutor.DiscardPolicy());
+        ex.setWaitForTasksToCompleteOnShutdown(false);
+        ex.initialize();
+        return ex;
+    }
 }
